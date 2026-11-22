@@ -16,7 +16,7 @@
    h=15: -0.036 [-0.058, -0.014]   cumulative -0.535
    h=1 gap: +0.001; largest single-period gap at h=8 (-0.051)
    cumulative score first has its whole 95% band below zero at H = 3
-   figure: C:\Users\Нурай\Desktop\calling-the-bluff\results\haiku\figure5_timing.png
+   figure: results/haiku/figure5_timing.png
 
 2. Power: resampling the 12 observed run means to N runs
    N = 12 runs: interval below zero   87%, sign test significant   39%

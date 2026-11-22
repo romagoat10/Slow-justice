@@ -1,6 +1,6 @@
 # Slow Justice: paper, reproduction code, and analysis
 
-> 📄 **Read the paper: [paper/Calling_the_Bluff.pdf](paper/Calling_the_Bluff.pdf)** (revised version, November 2026). The original hackathon version is [paper/Calling_the_Bluff_sprint_version.pdf](paper/Calling_the_Bluff_sprint_version.pdf). The paper's source is [paper/source/paper.html](paper/source/paper.html): edit it, then print it to PDF (see §1).
+> 📄 **Read the paper: [paper/Slow_Justice.pdf](paper/Slow_Justice.pdf)** (revised version, November 2026). The original hackathon version is [paper/Calling_the_Bluff_sprint_version.pdf](paper/Calling_the_Bluff_sprint_version.pdf). The paper's source is [paper/source/paper.html](paper/source/paper.html): edit it, then print it to PDF (see §1).
 >
 > *Slow Justice: How LLM Pricing Agents Pass Collusion Audits by Reacting Late.* Abayev Ramazan, with Apart Research. First written at an Apart Research hackathon (October 2026) under the title *Calling the Bluff: Forced-Deviation Audits of LLM Pricing Agents That Punish Slowly*.
 
@@ -21,7 +21,7 @@ It contains:
 ## 1. Quick start
 
 ```powershell
-cd calling-the-bluff
+cd slow-justice
 python -m pip install --user numpy matplotlib
 ```
 
@@ -68,7 +68,7 @@ python scripts/timing_and_power.py
 Rebuild the paper PDF from its source (any Chromium browser can print it; this uses Edge):
 
 ```powershell
-& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new --no-pdf-header-footer --print-to-pdf="$PWD\paper\Calling_the_Bluff.pdf" "$PWD\paper\source\paper.html"
+& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new --no-pdf-header-footer --print-to-pdf="$PWD\paper\Slow_Justice.pdf" "$PWD\paper\source\paper.html"
 ```
 
 Reanalyze the real sprint Haiku logs (free; extract `live_logs.tar.gz` from the hackathon repo first):

@@ -64,7 +64,7 @@ def timing(runs, rho, B=5000, seed=0):
         print(f"   h={k + 1:2d}: {mean[k]:+.3f} [{lo[k]:+.3f}, {hi[k]:+.3f}]   cumulative {cum[k]:+.3f}")
     print(f"   h=1 gap: {mean[0]:+.3f}; largest single-period gap at h={int(np.argmin(mean)) + 1} ({mean.min():+.3f})")
     print(f"   cumulative score first has its whole 95% band below zero at H = {first_sig}")
-    print(f"   figure: {out}")
+    print(f"   figure: {out.relative_to(ROOT).as_posix()}")
     return dict(mean=mean.tolist(), lo=lo.tolist(), hi=hi.tolist(), cum=cum.tolist(), first_sig=first_sig)
 
 
