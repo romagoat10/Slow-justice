@@ -21,6 +21,7 @@ import numpy as np
 
 from ctb.analysis import format_table3, positive_control_table, table3
 from ctb.game import load_runs
+from ctb.stickiness import pooled_rho
 
 
 def figure2(res, out: Path):
@@ -113,14 +114,30 @@ def main():
     (out / "table4.md").write_text(table4(res), encoding="utf-8")
     (out / "results.json").write_text(json.dumps(res, indent=2, default=float), encoding="utf-8")
 
+    fe = res["fixed_effects"]
+    print(f"\nExtension - fixed-effects rho {fe['rho']:.3f}: PI_dyn = {fe['mean']:+.3f} "
+          f"[{fe['ci'][0]:+.3f}, {fe['ci'][1]:+.3f}] (rho re-estimated in each resample)")
+    lo = res["leave_one_out"]
+    print(f"Extension - leave one run out: PI_dyn ranges {min(lo['means']):+.3f} to "
+          f"{max(lo['means']):+.3f}; dropping run {lo['most_influential']} moves it most")
+
     if args.posctrl:
-        print("\nPositive control (Table 5)")
-        for g in load_runs(args.posctrl):
-            pc = positive_control_table(g)
-            print(f" game {g['run_id']} (own rho {pc['rho']:.2f})")
+        games = load_runs(args.posctrl)
+        # pooled rho over the positive-control games, periods before the first fork (paper: 0.64)
+        first = min(int(fk["t"]) for g in games for fk in g["forks"].values())
+        rho_pc = pooled_rho([{"shown": np.asarray(g["base"]["prices"], float)} for g in games],
+                            t_min=1, t_max=first)
+        print(f"\nPositive control (Table 5), pooled own rho = {rho_pc:.3f}")
+        allrows = []
+        for g in games:
+            pc = positive_control_table(g, rho=rho_pc)
+            print(f" game {g['run_id']} ({g.get('source', '')})")
             for row in pc["rows"]:
-                print(f"   fork {row['t']}: PI_1 {row['PI_1']:+.3f}  static {row['PI_static']:+.2f}"
-                      f"  dyn {row['PI_dyn']:+.2f}")
+                allrows.append(row)
+                print(f"   fork at period {row['t'] + 1}: PI_1 {row['PI_1']:+.3f}  static "
+                      f"{row['PI_static']:+.2f}  dyn {row['PI_dyn']:+.2f}")
+        print(f" all {len(allrows)} forks: PI_1 {np.mean([r['PI_1'] for r in allrows]):+.3f}, "
+              f"dyn {np.mean([r['PI_dyn'] for r in allrows]):+.2f}")
     print(f"\nOutputs in {out}")
 
 

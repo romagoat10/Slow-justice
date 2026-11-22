@@ -14,7 +14,7 @@ It contains:
 * An audit of the numbers the paper prints, plus a list of methodological concerns.
 * One new experiment (two-decimal rounding bias) that the paper doesn't run.
 
-> **What is *not* here:** the paper's real Claude Haiku 5.5 logs. Table 3, Table 5 and Figure 2 depend on them, and they aren't in the PDF. The code to regenerate them is here (`--backend llm`) but has **not** been run, because it costs money and needs an API key (cost estimate in §6.3). Every Part 2 number below that isn't quoted from the paper comes from **synthetic agents**, and is labelled that way.
+> **Real Haiku data:** the original sprint logs (`results/live_logs.tar.gz` in the hackathon repo) are converted into `data/haiku/` and `data/haiku_posctrl/` by `scripts/import_team_logs.py`. This code **independently reproduces Table 3, Table 5 and the upward control from those raw logs** (§5.3), with no new API calls. New Haiku experiments (`--backend llm`) have **not** been run yet; they need an API key (cost estimate in §6.3).
 
 ---
 
@@ -55,6 +55,16 @@ python scripts/analyze_part2.py --data data/synthetic --posctrl data/synthetic_p
 
 ```powershell
 python scripts/rounding_bias.py
+```
+
+Reanalyze the real sprint Haiku logs (free; extract `live_logs.tar.gz` from the hackathon repo first):
+
+```powershell
+python scripts/import_team_logs.py --logs <extracted-folder>\logs
+```
+
+```powershell
+python scripts/analyze_part2.py --data data/haiku --posctrl data/haiku_posctrl
 ```
 
 The real experiment (paid, about 6,840 Haiku calls plus controls):
@@ -244,6 +254,38 @@ The same agent with δ = 0 (a true null) gave PI_dyn = −0.031 [−0.079, +0.01
 
 The punish rule is set to drop to 1.50 for 3 rounds, and the agent acts **one period late**, mimicking Haiku's "notes say punish, price unchanged" behaviour. The one-period score is **positive in all 8 forks** (+0.02 to +0.03), while the dynamic score is between −2.5 and −2.9 in all 8. This reproduces the paper's Table 5 failure mode.
 
+### 5.3 Reanalysis of the real Haiku 5.5 sprint logs (free, no new API calls)
+
+`scripts/import_team_logs.py` converts the 12 completed base runs (150 periods each), the 48 cut and no-cut forks, the 12 second no-cut copies, the 12 raise copies (8 runs) and the two positive-control games (third attempt, `punisher_v2`). This code was written separately from the sprint code, and it reproduces the paper's numbers from the raw prices:
+
+| Quantity | Paper | This code, on the sprint logs |
+|---|---|---|
+| Pooled ρ̂ (95% CI) | 0.922 (0.87–0.95) | **0.922** (0.873–0.948) |
+| Mean price, last 10 periods | 2.07 | **2.071** |
+| PI_1 | +0.057 [+0.049, +0.065], 0/12 | **+0.057** [+0.049, +0.065], 0/12 |
+| PI_15^static | −0.192 [−0.533, +0.132], 6/12 | **−0.192** [−0.526, +0.127], 6/12 |
+| PI_15^dyn (ρ = 0.922) | −0.534 [−0.856, −0.194], 9/12 | **−0.535** [−0.846, −0.198], 9/12 |
+| G_15 | +1.027 [+0.608, +1.460] | **+1.027** [+0.602, +1.458] |
+| G_15^enforced | −0.146 [−0.252, −0.047] | **−0.147** [−0.234, −0.054] |
+| Noise floor / identical agent-periods | 0.007 / 347 of 360 | **0.0071** / **347 of 360** |
+| One-period "no" but dynamic negative | 21 of 48 | **21 of 48** |
+| Cutting paid off | 39 of 48 | **39 of 48** |
+| Own-ρ per run (range) | −0.348 [−0.662, −0.058] (0.35–0.96) | **−0.349** [−0.660, −0.065] (0.35–0.96) |
+| Upward control: PI_dyn after raise vs after cut | +0.013 [−0.030, +0.091] vs −0.833 | **+0.013** [−0.029, +0.091] vs **−0.836** |
+| Upward control: PI_1 after raise | −0.039 | **−0.039** |
+| Positive control: pooled own ρ | 0.64 | **0.635** |
+| Positive control, game 1: dynamic at periods 50/60/70/80 | −3.17 / −6.46 / −2.25 / −6.00 | **−3.17 / −6.46 / −2.25 / −6.00** |
+| Positive control, game 1: static sum | −2.82 / −6.15 / −2.03 / −5.69 | **identical** |
+| Positive control, all 8 forks: PI_1 / dynamic | +0.064 / −2.25 | **+0.064 / −2.25** |
+
+Small CI differences come from bootstrap randomness. **One real discrepancy:** Table 5 and the Figure 3 caption give PI_1 = **+0.061** at periods 50 and 70 of game 1, but the logs give **+0.063** there. The +0.061 matches game 2 instead, so it looks like a copy error.
+
+**New robustness results on the real data:**
+
+* **Fixed-effects ρ = 0.783.** This is much lower than the pooled 0.922: the pooled estimate probably picks up differences in price levels between runs (§7.2). Even so, at ρ re-estimated with fixed effects in every resample, PI_15^dyn = **−0.344 [−0.649, −0.049]**, still below zero.
+* **Leave one run out:** PI_15^dyn stays between **−0.591 and −0.433** whichever run is dropped (ρ re-estimated each time). No single run creates the result.
+* Taken together, the main finding ("Haiku prices below a sticky non-punisher after cuts") holds up under both checks. What does not hold up is the precise size: −0.534 depends on using the pooled ρ, and −0.34 is a more conservative estimate.
+
 ---
 
 ## 6. Audit of the paper's own numbers
@@ -305,7 +347,7 @@ What this means:
 
 The paper explains this as runs with more early movement getting more weight. Two further points:
 
-* A single intercept `a` shared by runs whose prices settle at different levels mixes between-run differences into the slope. A **within (fixed-effects) estimator** removes this (`fixed_effects_rho()`). Report it next to the pooled value.
+* A single intercept `a` shared by runs whose prices settle at different levels mixes between-run differences into the slope. A **within (fixed-effects) estimator** removes this (`fixed_effects_rho()`). **On the real logs it gives ρ = 0.783, not 0.922**, and PI_15^dyn = −0.344 [−0.649, −0.049] (§5.3). Report it next to the pooled value.
 * In this specific setting, the dynamic measure at the per-run ρ is −0.348 and the CI still excludes zero. That's reassuring, but the conclusion depends on how ρ is estimated, and the ρ grid shows significance only at ρ = 0.9 and 0.95.
 
 ### 7.3 Noise floor compares different things
@@ -314,7 +356,7 @@ The noise floor (0.007) is the 95th percentile of a **per-fork** placebo quantit
 
 ### 7.4 The evidence across runs is weaker than the CI suggests
 
-The sign test across runs gives **9/12 negative, p = 0.15**, and two runs carry most of the effect. A bootstrap over just 12 clusters, with two influential ones, tends to give CIs that are too narrow. Report a leave-one-run-out analysis, and a permutation or wild-cluster bootstrap.
+The sign test across runs gives **9/12 negative, p = 0.15**, and two runs carry most of the effect. A bootstrap over just 12 clusters, with two influential ones, tends to give CIs that are too narrow. Report a leave-one-run-out analysis, and a permutation or wild-cluster bootstrap. **Leave-one-run-out on the real logs:** PI_15^dyn stays between −0.591 and −0.433 (§5.3), so no single run creates the result.
 
 ### 7.5 Several decisions were made after the main results
 
@@ -368,18 +410,19 @@ In the positive control, Haiku's notes say "punish now" but its price doesn't ch
 | [scripts/analyze_part2.py](scripts/analyze_part2.py) | Tables 3, 4 and 5, and Figure 2, from saved logs |
 | [scripts/verify_paper_numbers.py](scripts/verify_paper_numbers.py) | Internal-consistency audit of the paper's printed numbers |
 | [scripts/rounding_bias.py](scripts/rounding_bias.py) | New experiment: bias from two-decimal rounding |
+| [scripts/import_team_logs.py](scripts/import_team_logs.py) | Converts the sprint's raw Haiku logs into `data/haiku/` and `data/haiku_posctrl/` |
 | [tests/test_all.py](tests/test_all.py) | 10 unit tests (all pass) |
 | `results/` | Generated tables and figures |
-| `data/` | Generated run logs (synthetic only so far) |
+| `data/` | Run logs: synthetic runs, plus the real Haiku sprint runs converted to this format (`data/haiku`, `data/haiku_posctrl`) |
 
 ---
 
 ## 9. Suggested next steps
 
-1. Run the real Haiku experiment with this code. Check that the prompt matches the authors' starter code first.
+1. ~~Reanalyze the real Haiku logs.~~ Done for free from the sprint logs (§5.3). New Haiku experiments still need an API key; use the sprint prompt (it is stored in every log record) rather than the reconstruction in `ctb/agents.py`.
 2. Run it again with `--notes-first` (§7.7).
 3. Add a rounding-aware ρ estimator and report the §7.1 sensitivity on Haiku's own data.
-4. Report the fixed-effects ρ and a leave-one-run-out analysis next to Table 3.
+4. ~~Report the fixed-effects ρ and a leave-one-run-out analysis.~~ Done (§5.3); now put them in the paper next to Table 3.
 5. Fix the PDF's text layer and the three wording issues in §6.2, and add the missing Figure 4.
 
 ---

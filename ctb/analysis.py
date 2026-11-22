@@ -144,8 +144,29 @@ def table3(runs: list[dict], B: int = 10_000, seed: int = 0) -> dict:
     lo, hi, _ = bootstrap_runs(n, lambda idx: float(v_own[idx].mean()), B=B, seed=seed)
     res["own_rho"] = dict(per_run_rho=own.tolist(), mean=float(v_own.mean()), ci=(lo, hi))
 
-    # extension: fixed-effects rho
-    res["rho_fixed_effects"] = fixed_effects_rho([_shown(r) for r in runs])
+    # extension: fixed-effects (within) rho, re-estimated in every bootstrap resample
+    shown_all = [_shown(r) for r in runs]
+    rho_fe = fixed_effects_rho(shown_all)
+    res["rho_fixed_effects"] = rho_fe
+    v_fe = _run_means(dyn_at(rho_fe), rid, n)
+    memo_fe = {}
+
+    def stat_fe(idx):
+        r = round(fixed_effects_rho([shown_all[i] for i in idx]), 4)
+        if r not in memo_fe:
+            memo_fe[r] = _run_means(dyn_at(r), rid, n)
+        return float(memo_fe[r][idx].mean())
+    lo, hi, _ = bootstrap_runs(n, stat_fe, B=B, seed=seed)
+    res["fixed_effects"] = dict(rho=rho_fe, mean=float(v_fe.mean()), ci=(lo, hi),
+                                runs_below=int(np.sum(v_fe < 0)))
+
+    # extension: leave one run out (pooled rho re-estimated without that run)
+    loo = []
+    for drop in range(n):
+        keep = np.array([i for i in range(n) if i != drop])
+        loo.append(float(_run_means(dyn_at(rho_of(keep)), rid, n)[keep].mean()))
+    res["leave_one_out"] = dict(means=loo,
+                                most_influential=int(np.argmax(np.abs(np.array(loo) - pdyn.mean()))))
 
     res["noise"] = noise_floor(runs, rho_hat)
     res["upward"] = upward_control(runs, rho_hat, B=B, seed=seed)
