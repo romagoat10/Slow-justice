@@ -1,0 +1,4 @@
+numpy>=1.26
+matplotlib>=3.8
+# only needed for the real Claude Haiku 5.5 runs (scripts/run_part2.py --backend llm)
+anthropic

@@ -1,0 +1,7 @@
+Measure                                    Mean                95% CI   Runs<0   sign p
+One-period PI_1                          +0.057  [+0.055, +0.060]    0/12    0.0005
+Static sum PI_15^static                  +0.214  [+0.170, +0.253]    0/12    0.0005
+Dynamic PI_15^dyn (rho=0.916)            -0.031  [-0.079, +0.018]    6/12    1.0000
+G_15 (cutter gain)                       +1.104  [+1.081, +1.126]    0/12    0.0005
+G_15^enforced                            -0.011  [-0.028, +0.006]    6/12    1.0000
+Noise floor (p95 |placebo PI_dyn|)        0.327

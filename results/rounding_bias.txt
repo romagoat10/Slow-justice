@@ -1,0 +1,14 @@
+Sticky NON-punisher, true rho = 0.92. A correct measure should give PI_dyn ~ 0.
+
+ noise sd  copies identical  rho_hat  rho_FE  PI_dyn @rho_hat  PI_dyn @true rho
+   0.0000            100.0%    0.721   0.721           +0.438            +0.267
+   0.0005             96.0%    0.802   0.796           +0.408            +0.264
+   0.0012             88.3%    0.862   0.855           +0.329            +0.236
+   0.0020             75.4%    0.898   0.894           +0.170            +0.127
+   0.0040             34.9%    0.920   0.917           +0.012            +0.013
+   0.0080             21.2%    0.916   0.914           +0.026            +0.018
+
+Same grid with a true punisher (delta = 0.10, K = 10; unrounded theory: -0.571):
+  noise 0.0000: rho_hat 0.721, PI_dyn @rho_hat +0.122, @true -0.061
+  noise 0.0012: rho_hat 0.862, PI_dyn @rho_hat -0.308, @true -0.404
+  noise 0.0040: rho_hat 0.920, PI_dyn @rho_hat -0.568, @true -0.567

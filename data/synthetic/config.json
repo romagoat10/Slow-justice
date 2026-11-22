@@ -1,0 +1,16 @@
+{
+  "backend": "synthetic",
+  "out": "data\\synthetic",
+  "runs": "12",
+  "T": "150",
+  "forks": "[75, 95, 115, 135]",
+  "model": "claude-haiku-5-5",
+  "effort": "medium",
+  "notes_first": "False",
+  "positive_control": "False",
+  "no_monopoly_check": "False",
+  "noise_seed": "2026",
+  "syn_rho": "0.92",
+  "syn_delta": "0.03",
+  "syn_noise": "0.004"
+}

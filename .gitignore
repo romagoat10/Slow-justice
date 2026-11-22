@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.tmp
+.env
+.venv/
+# real-API run logs can be large; remove this line if you want to publish them
+data/haiku*/
