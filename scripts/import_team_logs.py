@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -38,7 +39,28 @@ def read_jsonl(p: Path) -> list[dict]:
 
 
 def prices(records: list[dict]) -> list[list[float]]:
+    """Executed (market) prices. A forced cut can be unrounded, e.g. 0.9 * 2.15 = 1.935."""
     return [[float(r["actors"][a]["executed_price"]) for a in FIRMS] for r in records]
+
+
+_COMP = re.compile(r"Competitor's prices: \{'(Firm [AB])': ([0-9.]+)\}")
+
+
+def shown_prices(records: list[dict]) -> list[list[float]]:
+    """Prices as the OTHER agent saw them (two decimals, e.g. 1.935 is shown as 1.94).
+
+    Read from each actor's market_data text, which lists the competitor's displayed price
+    for that period. The paper's measures and rho regression use these shown prices.
+    """
+    out = []
+    for r in records:
+        row = [float(r["actors"][a]["executed_price"]) for a in FIRMS]
+        for viewer in FIRMS:
+            m = _COMP.search(r["actors"][viewer].get("market_data") or "")
+            if m:
+                row[FIRMS.index(m.group(1))] = float(m.group(2))
+        out.append(row)
+    return out
 
 
 def load(logs: Path):
@@ -67,7 +89,7 @@ def build_run(run_id, base_name, meta, d, fork_list, H=15):
     assert periods == list(range(1, len(recs) + 1)), f"{base_name}: periods not 1..N"
     run = {"run_id": run_id, "source": base_name, "backend": "imported-sprint-logs",
            "prompt_variant": meta.get("prompt_variant"),
-           "base": {"prices": prices(recs)}, "forks": {}}
+           "base": {"prices": prices(recs), "shown": shown_prices(recs)}, "forks": {}}
     issues = []
     for fmeta, fd, ok in fork_list:
         kind = KIND[fmeta["kind"]]
@@ -85,6 +107,7 @@ def build_run(run_id, base_name, meta, d, fork_list, H=15):
         if kind in fk:
             issues.append(f"duplicate {kind} at period {t} ({fd.name}); keeping first"); continue
         fk[kind] = prices(cont)
+        fk[kind + "_shown"] = shown_prices(cont)
         fk[kind + "_dir"] = fd.name
     # forks without a cut/nocut pair are unusable for the main measures
     for key in list(run["forks"]):

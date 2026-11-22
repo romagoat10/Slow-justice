@@ -125,7 +125,8 @@ def main():
         games = load_runs(args.posctrl)
         # pooled rho over the positive-control games, periods before the first fork (paper: 0.64)
         first = min(int(fk["t"]) for g in games for fk in g["forks"].values())
-        rho_pc = pooled_rho([{"shown": np.asarray(g["base"]["prices"], float)} for g in games],
+        rho_pc = pooled_rho([{"shown": np.asarray(g["base"].get("shown", g["base"]["prices"]), float)}
+                             for g in games],
                             t_min=1, t_max=first)
         print(f"\nPositive control (Table 5), pooled own rho = {rho_pc:.3f}")
         allrows = []

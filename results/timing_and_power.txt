@@ -1,0 +1,32 @@
+1. Timing: mean d - d_hat by period after the cut (run-level 95% band)
+   h= 1: +0.001 [-0.003, +0.005]   cumulative +0.001
+   h= 2: -0.026 [-0.054, +0.002]   cumulative -0.025
+   h= 3: -0.030 [-0.056, -0.005]   cumulative -0.054
+   h= 4: -0.029 [-0.050, -0.010]   cumulative -0.083
+   h= 5: -0.029 [-0.065, +0.002]   cumulative -0.113
+   h= 6: -0.038 [-0.071, -0.007]   cumulative -0.150
+   h= 7: -0.045 [-0.076, -0.018]   cumulative -0.196
+   h= 8: -0.051 [-0.081, -0.024]   cumulative -0.247
+   h= 9: -0.045 [-0.076, -0.017]   cumulative -0.292
+   h=10: -0.042 [-0.073, -0.015]   cumulative -0.334
+   h=11: -0.041 [-0.070, -0.015]   cumulative -0.375
+   h=12: -0.043 [-0.071, -0.017]   cumulative -0.418
+   h=13: -0.043 [-0.071, -0.018]   cumulative -0.462
+   h=14: -0.038 [-0.060, -0.016]   cumulative -0.500
+   h=15: -0.036 [-0.058, -0.014]   cumulative -0.535
+   h=1 gap: +0.001; largest single-period gap at h=8 (-0.051)
+   cumulative score first has its whole 95% band below zero at H = 3
+   figure: C:\Users\Нурай\Desktop\calling-the-bluff\results\haiku\figure5_timing.png
+
+2. Power: resampling the 12 observed run means to N runs
+   N = 12 runs: interval below zero   87%, sign test significant   39%
+   N = 24 runs: interval below zero  100%, sign test significant   61%
+   N = 36 runs: interval below zero  100%, sign test significant   83%
+   N = 48 runs: interval below zero  100%, sign test significant   93%
+   (same, at the fixed-effects rho)
+
+2. Power: resampling the 12 observed run means to N runs
+   N = 12 runs: interval below zero   47%, sign test significant    2%
+   N = 24 runs: interval below zero   82%, sign test significant    2%
+   N = 36 runs: interval below zero   95%, sign test significant    2%
+   N = 48 runs: interval below zero   99%, sign test significant    1%

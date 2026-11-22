@@ -1,6 +1,6 @@
 # Calling the Bluff: reproduction, code, and critical analysis
 
-> 📄 **Read the paper: [paper/Calling_the_Bluff.pdf](paper/Calling_the_Bluff.pdf)**
+> 📄 **Read the paper: [paper/Calling_the_Bluff.pdf](paper/Calling_the_Bluff.pdf)** (revised version, November 2026). The original hackathon version is [paper/Calling_the_Bluff_sprint_version.pdf](paper/Calling_the_Bluff_sprint_version.pdf). The paper's source is [paper/source/paper.html](paper/source/paper.html): edit it, then print it to PDF (see §1).
 >
 > *Calling the Bluff: Forced-Deviation Audits of LLM Pricing Agents That Punish Slowly.* Abayev Ramazan, with Apart Research (hackathon sprint, October 2026).
 
@@ -55,6 +55,20 @@ python scripts/analyze_part2.py --data data/synthetic --posctrl data/synthetic_p
 
 ```powershell
 python scripts/rounding_bias.py
+```
+
+```powershell
+python scripts/adjustment_style.py
+```
+
+```powershell
+python scripts/timing_and_power.py
+```
+
+Rebuild the paper PDF from its source (any Chromium browser can print it; this uses Edge):
+
+```powershell
+& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new --no-pdf-header-footer --print-to-pdf="$PWD\paper\Calling_the_Bluff.pdf" "$PWD\paper\source\paper.html"
 ```
 
 Reanalyze the real sprint Haiku logs (free; extract `live_logs.tar.gz` from the hackathon repo first):
@@ -271,20 +285,49 @@ The punish rule is set to drop to 1.50 for 3 rounds, and the agent acts **one pe
 | One-period "no" but dynamic negative | 21 of 48 | **21 of 48** |
 | Cutting paid off | 39 of 48 | **39 of 48** |
 | Own-ρ per run (range) | −0.348 [−0.662, −0.058] (0.35–0.96) | **−0.349** [−0.660, −0.065] (0.35–0.96) |
-| Upward control: PI_dyn after raise vs after cut | +0.013 [−0.030, +0.091] vs −0.833 | **+0.013** [−0.029, +0.091] vs **−0.836** |
+| Upward control: PI_dyn after raise vs after cut | +0.013 [−0.030, +0.091] vs −0.833 | **+0.013** [−0.029, +0.091] vs **−0.835** |
 | Upward control: PI_1 after raise | −0.039 | **−0.039** |
 | Positive control: pooled own ρ | 0.64 | **0.635** |
 | Positive control, game 1: dynamic at periods 50/60/70/80 | −3.17 / −6.46 / −2.25 / −6.00 | **−3.17 / −6.46 / −2.25 / −6.00** |
 | Positive control, game 1: static sum | −2.82 / −6.15 / −2.03 / −5.69 | **identical** |
+| Positive control, game 1: PI_1 | +0.061 / +0.073 / +0.061 / +0.073 | **identical** |
 | Positive control, all 8 forks: PI_1 / dynamic | +0.064 / −2.25 | **+0.064 / −2.25** |
 
-Small CI differences come from bootstrap randomness. **One real discrepancy:** Table 5 and the Figure 3 caption give PI_1 = **+0.061** at periods 50 and 70 of game 1, but the logs give **+0.063** there. The +0.061 matches game 2 instead, so it looks like a copy error.
+Small CI differences come from bootstrap randomness. Every best response here is computed on the price the rival was **shown** (two decimals, read from the log text), as the paper defines. That matters: a forced cut can be unrounded (0.9 × 2.15 = 1.935), but the rival sees "1.94". Using the unrounded price instead changes the positive-control PI_1 from the paper's +0.061 to +0.063.
 
 **New robustness results on the real data:**
 
-* **Fixed-effects ρ = 0.783.** This is much lower than the pooled 0.922: the pooled estimate probably picks up differences in price levels between runs (§7.2). Even so, at ρ re-estimated with fixed effects in every resample, PI_15^dyn = **−0.344 [−0.649, −0.049]**, still below zero.
+* **Fixed-effects ρ = 0.783.** This is much lower than the pooled 0.922: the pooled estimate probably picks up differences in price levels between runs (§7.2). Even so, at ρ re-estimated with fixed effects in every resample, PI_15^dyn = **−0.344 [−0.650, −0.049]**, still below zero, although only **6 of 12** runs are negative at that ρ.
 * **Leave one run out:** PI_15^dyn stays between **−0.591 and −0.433** whichever run is dropped (ρ re-estimated each time). No single run creates the result.
 * Taken together, the main finding ("Haiku prices below a sticky non-punisher after cuts") holds up under both checks. What does not hold up is the precise size: −0.534 depends on using the pooled ρ, and −0.34 is a more conservative estimate.
+
+### 5.4 How Haiku actually adjusts (`python scripts/adjustment_style.py`)
+
+* **Haiku is lumpy, not gradual.** In the 12 base runs an agent keeps exactly the same price in **91.0%** of periods and jumps in 9.0% (median jump 0.10). 88% of its prices are on a 0.05 grid.
+* **That explains ρ̂ = 0.922.** A simulated rival that holds its price with probability 0.91 and otherwise jumps to its target gives **ρ̂ = 0.922** under the paper's regression, exactly Haiku's value.
+* **The dynamic baseline still works for lumpy agents** (paper Table 6):
+  * non-punisher ≈ 0, punisher (δ = 0.10) ≈ −0.6, while the one-period test still misses the punisher (+0.085)
+  * 12-run audits: 0–2% false alarms, and the punisher is detected in 96–100%
+* **State dependence doesn't explain Haiku's result.** Haiku changes price more often when far from its best response (13.7% vs 6–9%). But at Haiku's prices a 10% cut doesn't change its change rate. A simulated non-punisher with Haiku's measured rates scores +0.020, and 0 of 300 simulated audits falsely flag it.
+* This replaces the open question in §7.1: Haiku isn't the "gradual mover with rounded prices" that the rounding experiment models, so that bias doesn't apply to it.
+
+### 5.5 When Haiku responds, what it writes, and how many runs a follow-up needs
+
+`python scripts/timing_and_power.py` and `python scripts/notes_analysis.py --logs <extracted>\logs` (paper Section 4.4, Figure 5, Table 7):
+
+* **Timing.** One period after the cut, Haiku's gap to the sticky baseline is **+0.001**, essentially zero. From period 2 on it is below the baseline in every period (−0.026 to −0.051, largest at period 8), and the cumulative score is clearly negative from **H = 3**. The one-period test looks at the only period with no response. Figure: [results/haiku/figure5_timing.png](results/haiku/figure5_timing.png).
+* **What the rival writes** (its notes for the 3 periods after the fork, cut copy vs no-cut copy):
+
+  | Kind of language | Cut copy | No-cut copy |
+  |---|---|---|
+  | Punish / retaliate | 2% (1 of 48) | 0% |
+  | Match or follow the rival's price | 85% | 73% |
+  | Forecast: will the cut last? | **96%** | 35% |
+  | Wait and see / monitor | **69%** | 29% |
+  | Restore cooperation / high prices | 21% | 17% |
+
+  In its own words, Haiku treats the cut as news about the rival's future price ("If Firm B stays at or below 1.65 for two consecutive rounds, test 1.9…"), not as something to punish. Keyword matching is crude and notes need not be faithful, so this is descriptive evidence. It does point to **forecasting** as the mechanism.
+* **Power for a follow-up.** Resampling the 12 runs: at the pooled ρ, the sign test would be significant in 39% of studies with 12 runs, 61% with 24, **83% with 36 and 93% with 48**. At the fixed-effects ρ more runs don't help, because the typical run isn't below the baseline.
 
 ---
 
@@ -302,6 +345,8 @@ From `python scripts/verify_paper_numbers.py`: 20 of 23 checks are consistent.
 * Positive control: game 1's mean dynamic score is −4.47. Given the 8-fork mean of −2.25, game 2 must average −0.03, which fits the paper saying the rule could never fire in game 2.
 
 ### 6.2 Inconsistencies and wording problems
+
+> **Status:** items 1–4 and 6 are fixed in the revised paper (see its Appendix E). Item 3 turned out to be consistent: one run is +0.28 after a raise and the other 7 are slightly negative, and the revised text now says so.
 
 1. **"About an eighth of the cutter's gain."** G^enforced / G = 0.146 / 1.027 = 0.142, which is about **1/7**. It's 1/8 only relative to the gain the cutter would have had with no response (0.146 / 1.173 = 0.124). The text should say which one it means.
 2. **Horizon of G_H.** The formula sums k = 0..H, which is **16** periods including the cut period, but the text says "over 15 periods".
@@ -410,8 +455,12 @@ In the positive control, Haiku's notes say "punish now" but its price doesn't ch
 | [scripts/analyze_part2.py](scripts/analyze_part2.py) | Tables 3, 4 and 5, and Figure 2, from saved logs |
 | [scripts/verify_paper_numbers.py](scripts/verify_paper_numbers.py) | Internal-consistency audit of the paper's printed numbers |
 | [scripts/rounding_bias.py](scripts/rounding_bias.py) | New experiment: bias from two-decimal rounding |
+| [scripts/adjustment_style.py](scripts/adjustment_style.py) | How Haiku adjusts (hold or jump) and simulations showing the baseline still works |
+| [scripts/timing_and_power.py](scripts/timing_and_power.py) | Per-period response (Figure 5) and runs needed for a follow-up |
+| [scripts/notes_analysis.py](scripts/notes_analysis.py) | What the rival writes after a cut (needs the raw sprint logs) |
 | [scripts/import_team_logs.py](scripts/import_team_logs.py) | Converts the sprint's raw Haiku logs into `data/haiku/` and `data/haiku_posctrl/` |
 | [tests/test_all.py](tests/test_all.py) | 10 unit tests (all pass) |
+| [paper/source/paper.html](paper/source/paper.html) | Editable source of the revised paper (figures in `paper/source/figures/`) |
 | `results/` | Generated tables and figures |
 | `data/` | Run logs: synthetic runs, plus the real Haiku sprint runs converted to this format (`data/haiku`, `data/haiku_posctrl`) |
 

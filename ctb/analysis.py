@@ -36,12 +36,16 @@ def make_fork(fk: dict, cut_key: str = "cut", base_key: str = "nocut") -> Fork:
     j = 1 - i
     c = np.asarray(fk[cut_key], float)
     n = np.asarray(fk[base_key], float)
+    # BR is computed on the price the rival was SHOWN (two decimals) when the log has it
+    cs = np.asarray(fk.get(cut_key + "_shown", fk[cut_key]), float)
+    ns = np.asarray(fk.get(base_key + "_shown", fk[base_key]), float)
     return Fork(pA_cut=c[:, i], pA_nocut=n[:, i], pB_cut=c[:, j], pB_nocut=n[:, j],
-                meta=dict(t=fk["t"], cutter=i))
+                qshown_cut=cs[:, i], qshown_nocut=ns[:, i], meta=dict(t=fk["t"], cutter=i))
 
 
 def _shown(run: dict) -> dict:
-    return {"shown": np.asarray(run["base"]["prices"], float)}
+    """Prices as shown to agents (falls back to executed prices for synthetic runs)."""
+    return {"shown": np.asarray(run["base"].get("shown", run["base"]["prices"]), float)}
 
 
 @dataclass

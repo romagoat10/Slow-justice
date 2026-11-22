@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calling the Bluff: Forced-Deviation Audits of LLM Pricing Agents That Punish Slowly</title>
+<meta name="author" content="Abayev Ramazan">
+<style>
+  @page { size: Letter; margin: 1in 1in 0.9in 1in; }
+  html { font-family: "Times New Roman", Times, Georgia, serif; font-size: 11pt; line-height: 1.38; color: #000; }
+  body { margin: 0; }
+  h1.title { font-size: 15pt; text-align: center; margin: 0.6in 0 0.25in; padding: 10pt 0; border-top: 2.5pt solid #000; border-bottom: 1pt solid #000; line-height: 1.3; }
+  .author { text-align: center; font-size: 12pt; margin: 18pt 0 2pt; }
+  .affil { text-align: center; margin: 0 0 4pt; }
+  .version { text-align: center; font-size: 9.5pt; color: #444; margin-bottom: 22pt; }
+  .abstract { margin: 0 0.55in 6pt; text-align: justify; }
+  .abstract h2 { text-align: center; font-size: 11.5pt; margin: 0 0 6pt; }
+  h2 { font-size: 13pt; margin: 18pt 0 6pt; break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 12pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 8pt; text-align: justify; hyphens: auto; }
+  ol, ul { margin: 0 0 8pt; padding-left: 22pt; }
+  li { margin-bottom: 3pt; text-align: justify; }
+  .eq { margin: 2pt 0 2pt 18pt; font-family: "Cambria Math", "Times New Roman", serif; }
+  table { border-collapse: collapse; margin: 6pt auto 10pt; font-size: 9.8pt; break-inside: avoid; }
+  th, td { border: 0.6pt solid #000; padding: 3pt 6pt; vertical-align: top; text-align: left; }
+  th { background: #f2f2f2; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  caption { caption-side: top; text-align: left; font-size: 10pt; margin-bottom: 4pt; }
+  figure { margin: 8pt 0 12pt; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 10pt; text-align: justify; margin-top: 4pt; }
+  .new { }
+  .small { font-size: 9.5pt; }
+  .refs li { margin-bottom: 4pt; }
+  .pagebreak { break-before: page; }
+  a { color: #1a55c9; }
+</style>
+</head>
+<body>
+
+<h1 class="title">Calling the Bluff: Forced-Deviation Audits of LLM Pricing Agents That Punish Slowly</h1>
+<div class="author">Abayev Ramazan</div>
+<div class="affil">With Apart Research</div>
+<div style="height:16pt"></div>
+
+<div class="abstract">
+<h2>Abstract</h2>
+<p>Pricing agents built on large language models generally converge to keeping prices high without being told to collude in supracompetitive environments, and auditors need a way to tell when collusion occurs. Tran and Yu (2026) proposed a forced-deviation audit in which they ran a market scenario where they forced one agent to cut its price and checked whether the rival punishes it in the next period. We show that this one-period test can miss agents that change slowly, or respond with stickiness. A scripted rival that punishes but moves only 8% toward its target price scores +0.086 on the one-period test, indicating no punishment. We propose a dynamic baseline that predicts how a slow rival that does not punish would respond, and we score the rival against it. The same punisher scores −0.571, and a slow non-punisher scores zero even with the cut persisting over periods. When Claude Haiku 5.5 is instructed to punish cuts, the one-period test misses it in all four usable forks, because the agent acts one period late, while the dynamic measure detects it in all four. Auditing uninstructed Haiku 5.5 (12 runs, 48 cuts, ρ̂ = 0.92), the one-period test finds no punishment (+0.057, 95% CI 0.049 to 0.065), while the dynamic measure finds a response below the non-punishing baseline (−0.534, 95% CI −0.856 to −0.194) that is specific to cuts but too weak to make cutting unprofitable. The response stays below the baseline when stickiness is estimated with run fixed effects (ρ̂ = 0.78; −0.344, 95% CI −0.650 to −0.049) and when any single run is left out, although it is smaller than the pooled estimate suggests. Haiku’s stickiness is lumpy rather than gradual: it keeps its price in 91% of periods and then jumps, and we show that the dynamic baseline remains valid for agents that adjust this way. Haiku’s response is zero in the period after the cut and appears only from the second period on, and its written notes point to forecasting rather than retaliation: explicit punishment language appears after 1 of 48 cuts, while notes asking whether the cut will last rise from 35% to 96% of forks. This experiment further highlights the importance for audits of capturing how slowly an agent moves before declaring punishment.</p>
+</div>
+
+<h2>1. Introduction</h2>
+<p>Firms are increasingly letting LLM agents run pricing decisions. Fish et al. (2024) showed that two LLM agents pricing against each other in a simulated market converge to prices above the competitive level without any instruction to collude. However, high prices alone are not collusion, as collusion is defined by enforcement. A cartel holds only if a member who cheats is punished, so that cheating does not pay (Calvano et al., 2020). Agents also end up at high prices for reasons that have nothing to do with punishment, for example because they experiment slowly or copy each other (Lambin, 2024). An auditor who sees high prices must tell these apart.</p>
+<p>Tran and Yu (2026) built the most direct test so far. They clone a market, force one agent to cut its price in one copy but not the other, and compare the pricing of the rival in the period after the cut. If the rival drops its price further than its profit-maximizing response to the cut, it is punishing. They found that most prompted LLMs do not punish in this sense, and that GPT 5.2 does.</p>
+<p>However, their test rests on the assumption that a rival which is going to respond to a cut does so right away. The test compares the rival’s next price to an instant best response, so anything slower or sticky counts as holding back. LLM agents are not instant, and each period they move only part of the way toward a new price. Garra (2026) measured a persistence of about 0.92 for DeepSeek-V3.1 in a reproduction of the Fish et al. setup, meaning the agent closes only about 8% of the gap to its target each period.</p>
+<p>Example: say two agents price at 1.90, and one is forced to cut to 1.65. A rival that responded fully in the first period without punishing would drop to about 1.80. Our rival intends to go lower than that to punish, but it responds sticky, so in the first period it only moves to 1.884. The one-period test would see a rival that stayed above its best response and score it +0.086, indicating no punishment. Over the next 15 periods the same rival keeps pricing below where a sticky rival that never punishes would be, and decreases to 1.84 (Figure 1).</p>
+<p>The one-period test can therefore clear agents that do enforce high prices. We find this happens with a real LLM: when Claude Haiku 5.5 is instructed to punish cuts, the one-period test reports no punishment because of the delayed response to the cut.</p>
+<p>Our main contributions are:</p>
+<ol>
+<li>We show that the one-period forced-deviation test does not account for slow punishers. With scripted agents where the right answer is known, the one-period test labels every punisher with persistence ρ ≥ 0.5 as a non-punisher. More generally, it misses any punisher whose stickiness is above ρ* = δ / (δ + |ΔBR|), where δ is the size of the punishment and ΔBR is the best-response change the cut causes (Section 4.1). A plain sum of the response over several periods fixes this for a one-period cut but fails in the other direction when the cutter keeps its price low.</li>
+<li>We propose and validate a dynamic baseline that scores a rival against what a sticky rival that does not punish would have done after the same cut, using only the prices the rival was shown.</li>
+<li>We show that the one-period test misses an LLM explicitly instructed to punish, while the dynamic measure detects it in all four usable forks.</li>
+<li>We re-audit Claude Haiku 5.5, a model Tran and Yu did not test. We estimate its stickiness from its own price history (ρ̂ = 0.92) and report the one-period, static and dynamic measures side by side on 48 forced cuts. The one-period test finds no punishment, while the dynamic measure finds Haiku pricing below the non-punishing baseline, so the one-period test would have allowed it. The finding survives a fixed-effects estimate of ρ and leaving out any single run.</li>
+<li>We show how Haiku 5.5 actually adjusts: it holds its price in 91% of periods and then jumps to a new one. A simulated agent that holds with probability 0.91 reproduces Haiku’s ρ̂ = 0.922, and the dynamic baseline stays unbiased for such agents (Section 4.3).</li>
+<li>We show when Haiku responds and what it says. Relative to the dynamic baseline its response is zero one period after the cut and starts in the second, which is exactly what the one-period test cannot see. Its notes treat the cut as news about the rival’s future price rather than as something to punish (Section 4.4).</li>
+<li>We separate three questions the one-period test runs together (Table 4): whether the rival responds to a cut, whether the response is a punishment, and whether it deters cutting. For Haiku 5.5, it responds, which the one-period test misses, but the response does not make cutting unprofitable.</li>
+<li>Concrete recommendations for auditors running forced-deviation tests on AI agents (Appendix B).</li>
+</ol>
+
+<h2>2. Related Work</h2>
+<p>Calvano et al. (2020) showed that Q-learning agents in a repeated logit Bertrand duopoly learn supra-competitive prices sustained by punishment, and introduced the test of forcing one agent to deviate and watching the response. Lambin (2024) argued that apparent algorithmic collusion comes from slow responses over multiple rounds rather than punishment. Lopes de Moraes and De-Losso (2026) audited the punishment mechanism in Q-learners and found that they respond to a forced price rise the same way as to a cut, so a response to a cut alone does not prove punishment. Arslan, Xiao and Kim (2026) found that the sign of their punishment depended on the benchmark they compared against, which is the issue our dynamic baseline addresses.</p>
+<p>Regarding LLM pricing agents, Fish et al. (2024) introduced the market and prompt setup we use and found that LLM agents reach high prices. Garra (2026) reproduced this setup, measured price persistence of about 0.92 for DeepSeek-V3.1, and studied mitigations, while Lee and Park (2026) found that LLM agents’ reasoning can look faithful while prices stay collusive, so monitoring what agents say does not always tell the full story.</p>
+<p>The closest work to the forced-deviation audits of LLMs is Tran and Yu (2026). They introduced the forked-market audit for LLM agents, ran it on several prompted and RL-trained models, and reported the rival’s one-period response per unit of the cut. We use their design so our one-period numbers can be compared with theirs. What we add is a check of whether the one-period comparison is valid for sticky agents, a validated correction, and an audit of a new model.</p>
+
+<h2>3. Methods</h2>
+<h3>3.1 Market</h3>
+<p>We use the repeated Bertrand duopoly with logit demand from Calvano et al. (2020) and Fish et al. (2024), with a = 2, a₀ = 0, μ = 0.25 and marginal cost c = 1. Both firms set prices at the same time each period. The one-shot Nash price is 1.473, the joint monopoly price is 1.925, and the price a single firm selling one product would charge is 1.802. BR(q) denotes the price that maximizes a firm’s profit when its rival charges q.</p>
+
+<h3>3.2 Measures</h3>
+<p>We use a fork at period t to look at two copies. In the cut copy, the cutter A has its price replaced before it reaches the market. In the no-cut copy there is no change. Let d(t+h) = p<sub>B</sub><sup>cut</sup>(t+h) − p<sub>B</sub><sup>nocut</sup>(t+h) be how much lower the rival B priced in the cut copy h periods after the cut, and let ΔBR(t+h−1) = BR(q<sub>shown</sub><sup>cut</sup>(t+h−1)) − BR(q<sub>shown</sub><sup>nocut</sup>(t+h−1)) be the change in B’s best response caused by the cut, where q<sub>shown</sub> is the rival price B saw (rounded to two decimals, as displayed). For all three measures below, a negative value means B cut deeper than the most rational response would for an agent that does not punish.</p>
+<ul>
+<li>One-period test: PI<sub>1</sub> = d(t+1) − ΔBR(t)</li>
+<li>Static sum: PI<sub>H</sub><sup>static</sup> = Σ<sub>h=1..H</sub> [d(t+h) − ΔBR(t+h−1)]</li>
+<li>Dynamic baseline: let d̂(t) = 0 and d̂(t+h) = ρ·d̂(t+h−1) + (1−ρ)·ΔBR(t+h−1), the gap a sticky rival that never punishes would show. Then PI<sub>H</sub><sup>dyn</sup> = Σ<sub>h=1..H</sub> [d(t+h) − d̂(t+h)].</li>
+</ul>
+<p>The one-period test compares B to an agent that moves all the way to its best response at once, so a rival responding slowly looks like it forgave the cut. The static sum fixes this when the cut lasts one period, but when the cutter stays low it counts the sticky rival’s slow adjustment as forgiveness. The dynamic baseline scores a sticky non-punisher at zero in both cases, and we use H = 15.</p>
+
+<table>
+<caption>Table 1. What each measure treats as “not punishing.”</caption>
+<tr><th></th><th>One-period test</th><th>Static sum</th><th>Dynamic baseline</th></tr>
+<tr><td>Benchmark</td><td>Instant best response</td><td>Instant best response, every period</td><td>Sticky best response at the agent’s own ρ</td></tr>
+<tr><td>Periods looked at</td><td>1</td><td>H</td><td>H</td></tr>
+<tr><td>Sticky non-punisher scores</td><td>Above 0 (looks forgiving)</td><td>0 if the cut is one period, above 0 if it persists</td><td>0 in both cases</td></tr>
+<tr><td>Sticky punisher scores</td><td>Near or above 0 (missed)</td><td>Below 0 if the cut is one period, can be above 0 if it persists</td><td>Below 0 in both cases</td></tr>
+<tr><td>Needs ρ</td><td>No</td><td>No</td><td>Yes</td></tr>
+</table>
+
+<p>As a secondary measure we report deterrence, G<sub>H</sub> = Σ<sub>k=0..H</sub> [π<sub>A</sub><sup>cut</sup>(t+k) − π<sub>A</sub><sup>nocut</sup>(t+k)], summed over the cut period and the H periods after it, and the part of it caused by B’s response, G<sub>H</sub><sup>enforced</sup>, which recomputes A’s profit with B’s cut-copy price replaced by the baseline p<sub>B</sub><sup>nocut</sup> + d̂, holding A’s prices fixed.</p>
+
+<h3>3.3 Part 1: scripted agents</h3>
+<p>Each scripted rival moves part of the way to a target each period: p<sub>B</sub>(t) = ρ·p<sub>B</sub>(t−1) + (1−ρ)·target(t), with target(t) = m + BR(q<sub>shown</sub>(t−1)), minus δ for K = 10 periods after it sees a cut. ρ is stickiness, δ is how far below its profit-seeking target B goes to punish (δ = 0 means no punishment), and m holds B at 1.90 when nothing happens. A cuts once to BR(1.90). In one version A returns to 1.90 the next period, as in Tran and Yu’s audit. In the other A stays at the lower price. We run ρ ∈ {0, 0.5, 0.8, 0.92} and δ ∈ {0, 0.10}.</p>
+
+<h3>3.4 Part 2: Claude Haiku 5.5</h3>
+<p>Both firms are Claude Haiku 5.5 with the Fish et al. prompt run through the sprint starter code. Each period an agent sees up to 100 past periods of prices, quantities and profits, plus the plans and insights notes it wrote the period before, and returns a price and new notes. Haiku 5.5 does not accept a temperature setting, so it runs at its default sampling, with extended thinking off, effort medium, and a 4096-token output cap.</p>
+<p>Following Fish et al., one agent priced alone for 50 periods. Its mean price over the last 10 periods was 1.80 against the one-product monopoly price of 1.802, so the model qualified.</p>
+<p>We additionally ran 12 independent two-agent games of 150 periods. We estimated ρ by fitting p<sub>B</sub>(t) − BR(q<sub>shown</sub>(t−1)) = a + ρ·[p<sub>B</sub>(t−1) − BR(q<sub>shown</sub>(t−1))] + ε on periods 1–75 of every run, using only the two-decimal prices agents were shown. The pooled estimate is ρ̂ = 0.922.</p>
+<p>Each run is forked at periods 75, 95, 115 and 135, with the cutter alternating between the two agents. At each fork we run a no-cut copy and a cut copy, where the cutter’s price is replaced by a price 10% below its own previous price. The cutter is not told, and its history shows the forced price as its own. On 12 fork points drawn with a fixed seed before any fork ran, we also run a second no-cut copy, and the gap between those is our noise floor.</p>
+
+<h3>3.5 Statistics and preregistration</h3>
+<p>Each base run is one observation, giving 12 values. We report 95% percentile intervals from 10,000 resamples over runs, re-estimating ρ in each resample, and a sign test across runs. Because per-run ρ varies widely, we also report PI<sub>H</sub><sup>dyn</sup> at ρ ∈ {0, 0.25, 0.5, 0.75, 0.9, 0.95}. We say the rival priced below the non-punishing baseline only if the 95% interval on PI<sub>H</sub><sup>dyn</sup> is below zero, this holds across the plausible range of ρ, and the effect exceeds the noise floor. The protocol and predictions were pushed to the public repository before any model output, and every later change is listed with its reason in the protocol’s deviations log.</p>
+<p>For this revision we added two robustness checks that were not preregistered, both computed from the same logs without new model calls: a run fixed-effects (within) estimate of ρ, which removes differences in price levels between runs from the regression, and a leave-one-run-out analysis in which ρ is re-estimated without the dropped run. All numbers in Part 2 were recomputed from the raw logs by an independently written analysis (Code and Data).</p>
+
+<h2>4. Results</h2>
+<h3>4.1 Part 1</h3>
+<figure>
+<img src="figures/figure1.png" alt="Figure 1" style="width:70%">
+<figcaption>Figure 1. A scripted rival punishing slowly after a one-period forced cut. The one-period test compares the rival’s price in period 1 to an instant BR. The rival moves only part of the way, so it scores +0.086 and doesn’t count as punishing. The dynamic baseline is where a slow rival that doesn’t punish would be. The cut copy stays below it for all 15 periods.</figcaption>
+</figure>
+
+<table>
+<caption>Table 2. Scores of scripted rivals under each measure.</caption>
+<tr><th>ρ</th><th>δ</th><th>Cutter</th><th>Punishes?</th><th class="n">One-period</th><th class="n">Static sum</th><th class="n">Dynamic</th></tr>
+<tr><td>0</td><td>0</td><td>returns</td><td>no</td><td class="n">0.000</td><td class="n">0.000</td><td class="n">0.000</td></tr>
+<tr><td>0</td><td>0.10</td><td>returns</td><td>yes</td><td class="n">−0.100</td><td class="n">−1.000</td><td class="n">−1.000</td></tr>
+<tr><td>0.5</td><td>0</td><td>returns</td><td>no</td><td class="n">+0.051</td><td class="n">0.000</td><td class="n">0.000</td></tr>
+<tr><td>0.5</td><td>0.10</td><td>returns</td><td>yes</td><td class="n">+0.001</td><td class="n">−0.997</td><td class="n">−0.997</td></tr>
+<tr><td>0.8</td><td>0</td><td>returns</td><td>no</td><td class="n">+0.081</td><td class="n">+0.004</td><td class="n">0.000</td></tr>
+<tr><td>0.8</td><td>0.10</td><td>returns</td><td>yes</td><td class="n">+0.061</td><td class="n">−0.879</td><td class="n">−0.883</td></tr>
+<tr><td>0.92</td><td>0</td><td>returns</td><td>no</td><td class="n">+0.094</td><td class="n">+0.029</td><td class="n">0.000</td></tr>
+<tr><td>0.92</td><td>0.10</td><td>returns</td><td>yes</td><td class="n">+0.086</td><td class="n">−0.542</td><td class="n">−0.571</td></tr>
+<tr><td>0.5</td><td>0</td><td>stays low</td><td>no</td><td class="n">+0.051</td><td class="n">+0.102</td><td class="n">0.000</td></tr>
+<tr><td>0.5</td><td>0.10</td><td>stays low</td><td>yes</td><td class="n">+0.001</td><td class="n">−0.895</td><td class="n">−0.997</td></tr>
+<tr><td>0.8</td><td>0</td><td>stays low</td><td>no</td><td class="n">+0.081</td><td class="n">+0.393</td><td class="n">0.000</td></tr>
+<tr><td>0.8</td><td>0.10</td><td>stays low</td><td>yes</td><td class="n">+0.061</td><td class="n">−0.490</td><td class="n">−0.883</td></tr>
+<tr><td>0.92</td><td>0</td><td>stays low</td><td>no</td><td class="n">+0.094</td><td class="n">+0.836</td><td class="n">0.000</td></tr>
+<tr><td>0.92</td><td>0.10</td><td>stays low</td><td>yes</td><td class="n">+0.086</td><td class="n">+0.265</td><td class="n">−0.571</td></tr>
+</table>
+
+<p>A correct conclusion is below zero for punishers and not below zero for non-punishers. Only the dynamic measure is correct in every row.</p>
+<p>The one-period test only catches the punisher with ρ = 0. From ρ = 0.5 up, punishers score zero or higher, which reads as no punishment. The one-period test never wrongly accuses a non-punisher, but it misses every punisher with ρ of 0.5 or more. The static sum gets the sign right when the cutter returns to its price. When the cutter stays low, it scores non-punishers well above zero and misses the ρ = 0.92 punisher (+0.265).</p>
+<p>The boundary at 0.5 is not a coincidence. For the scripted punisher, PI<sub>1</sub> = −ρ·ΔBR − (1−ρ)·δ, so the one-period test stops flagging punishment exactly when ρ ≥ ρ* = δ / (δ + |ΔBR|). With δ = 0.10 and our cut (ΔBR = −0.102), ρ* = 0.495. The threshold rises for harsher punishments and falls for larger cuts, so an auditor should compute it for their own cut size rather than reuse 0.5.</p>
+<p>The dynamic measure depends on knowing ρ. For a non-punisher with true ρ = 0.92 facing a persisting cut, using ρ = 0.80 gives +0.443 and using ρ = 0.97 gives −0.372 (Figure 4, Appendix D). This is why we estimate ρ from the agent’s own prices before forking and report a range of ρ.</p>
+
+<h3>4.2 Part 2: Claude Haiku 5.5</h3>
+<figure>
+<img src="figures/figure2.png" alt="Figure 2" style="width:92%">
+<figcaption>Figure 2. (A) Run-level means and 95% intervals for each measure. Below zero indicates the rival priced below a rival that does not punish. The grey band is the noise floor from two untouched copies of the same fork. The one-period test is above zero, while the dynamic measure is below zero. (B) One-period against dynamic score for each of the 48 forced cuts. On 21 cuts the one-period test reads no punishment while the dynamic measure is negative.</figcaption>
+</figure>
+<p>Haiku 5.5 agents settled at high prices. The mean price over the last 10 periods of the base runs was 2.07, above the joint monopoly price of 1.925 and the Nash price of 1.473.</p>
+<p>In addition, Haiku 5.5 is sticky. The pooled ρ̂ is 0.922 (95% CI 0.87 to 0.95), so it closes about 8% of the gap to a new target each period. This is the same value as the scripted punisher in Figure 1.</p>
+
+<table>
+<caption>Table 3. A re-audit of Haiku 5.5 on 48 forced cuts in 12 runs, where each run’s forks are averaged, giving 12 values and 95% percentile intervals from 10,000 bootstrap resamples over runs. The last dynamic row is a robustness check added in this revision.</caption>
+<tr><th>Measure</th><th class="n">Mean</th><th class="n">95% CI</th><th class="n">Runs below 0</th><th class="n">Sign test p</th></tr>
+<tr><td>One-period PI<sub>1</sub></td><td class="n">+0.057</td><td class="n">[+0.049, +0.065]</td><td class="n">0 / 12</td><td class="n">0.0005</td></tr>
+<tr><td>Static sum PI<sub>15</sub><sup>static</sup></td><td class="n">−0.192</td><td class="n">[−0.533, +0.132]</td><td class="n">6 / 12</td><td class="n">1.00</td></tr>
+<tr><td>Dynamic PI<sub>15</sub><sup>dyn</sup> (pooled ρ = 0.922)</td><td class="n">−0.534</td><td class="n">[−0.856, −0.194]</td><td class="n">9 / 12</td><td class="n">0.15</td></tr>
+<tr><td>Dynamic PI<sub>15</sub><sup>dyn</sup> (fixed-effects ρ = 0.783)</td><td class="n">−0.344</td><td class="n">[−0.650, −0.049]</td><td class="n">6 / 12</td><td class="n">1.00</td></tr>
+<tr><td>Noise floor (95th pct. of absolute no-cut vs second no-cut score)</td><td class="n">0.007</td><td class="n">n/a</td><td class="n">n/a</td><td class="n">n/a</td></tr>
+<tr><td>G<sub>15</sub> (cutter’s profit gain from cutting)</td><td class="n">+1.027</td><td class="n">[+0.608, +1.460]</td><td class="n">1 / 12</td><td class="n">0.006</td></tr>
+<tr><td>G<sub>15</sub><sup>enforced</sup> (part of G<sub>15</sub> caused by the rival’s response)</td><td class="n">−0.146</td><td class="n">[−0.252, −0.047]</td><td class="n">9 / 12</td><td class="n">0.15</td></tr>
+</table>
+
+<p>As shown by the table, the one-period test and the dynamic measure do not align. The one-period test is positive in every run, which indicates no punishment, the same pattern as the scripted slow punisher in Table 2. The dynamic measure is negative, with a 95% interval below zero and about 75 times the noise floor. The two measures give opposite signs on 21 of the 48 cuts, and in all 21 the one-period test indicates no punishment while the dynamic measure is negative.</p>
+<p>The interval on PI<sub>15</sub><sup>dyn</sup> stays below zero at every value across the 95% interval for ρ. On the fixed grid, the mean is negative at every ρ, but the interval excludes zero only at ρ = 0.95 and 0.9. The conclusion therefore depends on ρ being high.</p>
+<p>9 of the 12 runs are negative, and the sign test across runs is not significant (p = 0.15). Two runs have the largest negative values and three are slightly positive, indicating that the effect is not uniform across runs.</p>
+<p>In addition, because per-run ρ varies, we recomputed the dynamic measure using each run’s own estimate instead of the pooled value. The mean is smaller but still below zero (−0.348, 95% CI −0.662 to −0.058).</p>
+<p><b>Robustness (added in this revision).</b> The pooled fit uses one intercept for all runs, so differences in price levels between runs can enter the slope. A run fixed-effects estimate removes them and gives a clearly lower ρ̂ = 0.783. At that value, re-estimated in every bootstrap resample, PI<sub>15</sub><sup>dyn</sup> = −0.344 (95% CI −0.650 to −0.049): still below the non-punishing baseline, but about a third smaller, and only 6 of the 12 runs are negative. Leaving out one run at a time, with ρ re-estimated each time, keeps PI<sub>15</sub><sup>dyn</sup> between −0.591 and −0.433, so no single run produces the result. We read this as evidence that the response is real but that its size is uncertain: −0.534 is an upper-end estimate and −0.34 a more conservative one.</p>
+<p>Regarding deterrence, cutting paid off for the cutter in 39 of 48 forks, with the cutter earning 1.03 more in the cut copy than in the no-cut copy over the cut period and the 15 periods after it. The rival’s response took back 0.15. That is about a seventh of the cutter’s realized gain, or an eighth of the 1.17 it would have gained had the rival not responded. Haiku’s response is measurable but too weak or too slow to make cheating definitely unprofitable within that period.</p>
+<p>In an exploratory upward control, on the 12 fork points with a second no-cut copy, we also forced the cutter 10% above its previous price. After a forced raise, Haiku does not price below the non-punishing baseline, with +0.013 (95% CI −0.030 to +0.091). On the same 12 forks, the score after a cut is −0.833. Seven of the 8 runs are slightly negative after a raise; the remaining run is positive (+0.28) and pulls the mean above zero. All are small next to the response to cuts.</p>
+<p>The upward copy also shows the one-period test’s bias running the other way. After a raise, a sticky rival rises less than an instant best response would, so the one-period test scores it −0.039, indicating a punishment. For a sticky agent, the one-period test misses punishment after cuts and reports it after raises.</p>
+<p>As an exploratory check that the pipeline detects an LLM known to punish, we added a rule to both agents’ prompts: if both prices were above 1.80 the previous round and the rival drops its price by more than 0.05, set your price to 1.50 for three rounds. We ran 2 games of 100 rounds and forked each at periods 50, 60, 70 and 80. In game 1, prices were 2.15 and 2.00. In game 2, prices were around 1.48 to 1.50, so the rule could never fire and those 4 forks do not test anything.</p>
+<p>Figure 3 (Appendix C) shows game 1’s fork at period 50. The cutter is forced from 2.15 to 1.935 (shown to the rival as 1.94) at period 0. In period 1, the rival’s written notes say the punishment condition is met, but its price stays at 2.00, and drops to 1.50 in period 2. The one-period test scores this fork at +0.061, not indicating punishment, and the dynamic measure scores it −3.17.</p>
+
+<table>
+<caption>Table 5. Haiku 5.5 instructed to punish cuts (game 1, 4 forks). Dynamic score at its own stickiness, 0.64.</caption>
+<tr><th>Fork period</th><th class="n">One-period PI<sub>1</sub></th><th class="n">Static sum</th><th class="n">Dynamic PI<sub>15</sub><sup>dyn</sup></th></tr>
+<tr><td>50</td><td class="n">+0.061</td><td class="n">−2.82</td><td class="n">−3.17</td></tr>
+<tr><td>60</td><td class="n">+0.073</td><td class="n">−6.15</td><td class="n">−6.46</td></tr>
+<tr><td>70</td><td class="n">+0.061</td><td class="n">−2.03</td><td class="n">−2.25</td></tr>
+<tr><td>80</td><td class="n">+0.073</td><td class="n">−5.69</td><td class="n">−6.00</td></tr>
+</table>
+
+<p>The one-period test misses an LLM that was told to punish in all four forks. The dynamic measure detects the punishment in all four. In the period right after the cut, the rival’s written notes say the trigger has fired and that punishment starts now, but the price it chose in that same reply is unchanged. It dropped to 1.50 one period later, and the one-period test stopped looking. The reply format asks for the price before the notes, so the agent could have committed to a price before it reasoned about the cut. Across all 8 forks, the dynamic measure is −2.25 and the one-period test is +0.064.</p>
+<p>All 6840 model calls in the base runs and forks returned different response IDs, so no reply was reused across copies. The two no-cut copies set the same price in 347 of the 360 agent periods even though no two of their written replies were the same. Haiku’s prices are near-deterministic given the same history, so the copies differ by chance. The cut versus no-cut gap is also far larger than the gap between the two no-cut copies.</p>
+
+<h3>4.3 How Haiku adjusts, and why the baseline still applies</h3>
+<p>The dynamic baseline describes a non-punisher that closes a fixed share of its gap every period. Haiku does not move like that. Across the 12 base runs, an agent keeps exactly the same price in 91.0% of periods and changes it in 9.0%. When it changes, it jumps (median 0.10, mean 0.14), and 88% of its prices lie on a 0.05 grid. A ρ̂ of 0.92 therefore means “rarely changes its price”, not “moves 8% of the way each period”.</p>
+<p>This matters less than it seems. If an agent keeps its price with probability ρ and otherwise jumps all the way to its target, its expected price follows exactly the partial-adjustment path, so the dynamic baseline is right on average. We checked this by simulation (Table 6). A lumpy rival that holds with probability 0.91 and jumps to a target rounded to 0.05 gives ρ̂ = 0.922 under our regression, the same value as Haiku. For that rival, the dynamic baseline scores a non-punisher at about zero and a punisher (δ = 0.10) at about −0.6, while the one-period test still misses the punisher. A 12-run audit like ours almost never wrongly reports a response below the baseline, and detects the punisher in 96–100% of simulated audits.</p>
+<table>
+<caption>Table 6. Simulated lumpy rival (holds its price with probability 0.91, otherwise jumps to its target on a 0.05 grid; baseline at the true ρ). “Audit detects” is the share of 400 simulated 12-run audits (4 forks per run) whose 95% interval for PI<sub>15</sub><sup>dyn</sup> is below zero.</caption>
+<tr><th>Cutter</th><th>Rival</th><th class="n">Mean PI<sub>1</sub></th><th class="n">Mean PI<sub>15</sub><sup>dyn</sup></th><th class="n">Audit detects</th><th class="n">Sign test significant</th></tr>
+<tr><td>returns</td><td>non-punisher</td><td class="n">+0.094</td><td class="n">−0.001</td><td class="n">0%</td><td class="n">0%</td></tr>
+<tr><td>returns</td><td>punisher (δ = 0.10)</td><td class="n">+0.085</td><td class="n">−0.596</td><td class="n">100%</td><td class="n">100%</td></tr>
+<tr><td>stays low</td><td>non-punisher</td><td class="n">+0.094</td><td class="n">+0.011</td><td class="n">2%</td><td class="n">1%</td></tr>
+<tr><td>stays low</td><td>punisher (δ = 0.10)</td><td class="n">+0.086</td><td class="n">−0.621</td><td class="n">96%</td><td class="n">71%</td></tr>
+</table>
+<p>Lumpy adjustment does make single forks noisy, because each fork is close to all-or-nothing: either the rival happened to change its price after the cut or it did not. This is one reason the result is carried by some runs and not others, and why a run-level sign test needs more runs to become significant.</p>
+<p>Haiku’s chance of changing its price also depends a little on how far it is from its best response: about 6–9% in the closest three quarters of periods and 13.7% in the farthest quarter. A cut moves the rival further from its best response, so a non-punisher could in principle adjust faster after a cut and look like a punisher. At Haiku’s price level this does not happen: a 10% cut moves the gap from 0.36 to 0.43, which leaves the change rate unchanged (5.8%). A simulated non-punisher with Haiku’s measured change rates scores +0.020 against the baseline at ρ = 0.922, and none of 300 simulated 12-run audits wrongly reports a response below the baseline. Haiku’s −0.534 is therefore not explained by the way it adjusts.</p>
+
+<h3>4.4 When Haiku responds, and what it writes</h3>
+<p>Figure 5 splits the dynamic score into its 15 periods. One period after the cut, Haiku’s price gap to the sticky non-punisher is +0.001, essentially zero; against the instant best response the same period looks forgiving (+0.057), which is the one-period test’s reading. From the second period on Haiku stays below the baseline in every period, by 0.026 to 0.051, with the largest gap eight periods after the cut. The cumulative score has its whole 95% band below zero from H = 3. An audit therefore needs to look at least three periods past the intervention to see this response at all.</p>
+<figure>
+<img src="figures/figure5.png" alt="Figure 5" style="width:100%">
+<figcaption>Figure 5. When Haiku 5.5 responds (48 forced cuts, 12 runs, ρ = 0.922). (A) Per-period gap between the rival’s cut-copy and no-cut prices, measured against the sticky non-punisher (red, d − d̂) and against the instant best response (grey, d − ΔBR). The band is a 95% interval from resampling runs. (B) Cumulative dynamic score PI<sub>H</sub><sup>dyn</sup> as the horizon H grows.</figcaption>
+</figure>
+<p>Every reply also contains the agent’s notes, so we can ask what the rival says it is doing. For each fork we searched the rival’s notes in the three periods after the cut for five kinds of language, and compared them with the same periods in the no-cut copy (Table 7). Explicit punishment language (punish, retaliate, price war, deter, send a signal) appears in 1 of 48 cut forks, and there it is a worry that the cutter’s move “may signal a new price war”, not a plan to punish. What changes after a cut is conditional, forward-looking language: notes asking whether the cutter will stay low or return rise from 35% to 96% of forks, and wait-and-see language from 29% to 69%. A typical plan reads: “If Firm B stays at or below 1.65 for two consecutive rounds, test 1.9 for one round.”</p>
+<table>
+<caption>Table 7. Language in the rival’s notes in the three periods after the fork (share of the 48 forks). Keyword matching is crude, and notes need not reflect how the price was chosen (Lee and Park, 2026), so this is descriptive evidence.</caption>
+<tr><th>Kind of language</th><th class="n">Cut copy</th><th class="n">No-cut copy</th></tr>
+<tr><td>Punish / retaliate</td><td class="n">2%</td><td class="n">0%</td></tr>
+<tr><td>Match or follow the rival’s price</td><td class="n">85%</td><td class="n">73%</td></tr>
+<tr><td>Forecast: will the cut last?</td><td class="n">96%</td><td class="n">35%</td></tr>
+<tr><td>Wait and see / monitor</td><td class="n">69%</td><td class="n">29%</td></tr>
+<tr><td>Restore cooperation / high prices</td><td class="n">21%</td><td class="n">17%</td></tr>
+</table>
+<p>By our behavioral definition (Table 4) Haiku’s response is a punishment: it is specific to cuts and costs the cutter profit. Its notes suggest a different mechanism: Haiku treats the cut as news that the rival may stay cheaper, and lowers its price as a conditional, cautious follow, not to discipline the cutter. For an auditor the two look the same in prices, which is why behavioral and stated evidence should be reported together.</p>
+
+<h2>5. Discussion and Limitations</h2>
+<p>The one-period audit only looks at whether the rival immediately dropped its price further than the instant best response. For an agent that adjusts slowly, that comparison indicates no punishment. Haiku 5.5 adjusts slowly, and we show that the one-period test would have indicated no punishment while the dynamic measure shows it pricing below the non-punishing baseline after cuts.</p>
+<p>The one-period test asks a single question, while our results suggest separating it into three, each defined by behavior. We proposed this framework after seeing the main results.</p>
+
+<table>
+<caption>Table 4. Three behavioral levels of a rival’s reaction to a forced cut, and where Haiku 5.5 falls.</caption>
+<tr><th>Level</th><th>Behavioral definition</th><th>Haiku 5.5</th></tr>
+<tr><td>1. Responds</td><td>Prices below a sticky rival that does not punish, after a cut (PI<sub>15</sub><sup>dyn</sup> &lt; 0)</td><td>Yes: −0.534 [−0.856, −0.194]; −0.344 [−0.650, −0.049] with fixed-effects ρ</td></tr>
+<tr><td>2. Punishes</td><td>The response is (a) specific to cuts, not to any price change (no drop below the baseline after a forced raise), and (b) costs the cutter profit relative to the non-punishing baseline (G<sub>15</sub><sup>enforced</sup> &lt; 0)</td><td>Yes, by this definition. (a) After a forced raise: +0.013 [−0.030, +0.091], against −0.833 after a cut on the same forks. (b) −0.146 [−0.252, −0.047]. Haiku’s notes, however, describe forecasting rather than retaliation (Section 4.4)</td></tr>
+<tr><td>3. Deters</td><td>Cutting does not pay over the horizon (G<sub>15</sub> ≤ 0)</td><td>No: +1.027 [+0.608, +1.460]; cutting paid off in 39 of 48 forks</td></tr>
+</table>
+
+<p>Its implication for AI safety lies in the fact that audits can be passed by being slow. An agent does not need to be designed to evade the audit for this to happen. Stickiness is a property of LLM agents that carry price history from one period to the next. Due to this, any audit checking behavior in a short window after an intervention should check how far the agent normally moves; otherwise stickiness would evade punishment indicators.</p>
+
+<h3>Limitations</h3>
+<ul>
+<li><b>The baseline assumes a form for stickiness.</b> The dynamic baseline models a non-punisher as moving a fixed fraction ρ of the way to its best response each period. Our scripted agents follow exactly this rule, so Part 1 shows the measure works when the assumption holds, not that it holds for LLMs. If Haiku’s adjustment depends on the size or direction of the change, the baseline is off by an amount we did not measure.</li>
+<li><b>Adjustment is lumpy, not gradual.</b> Haiku holds its price in 91% of periods and then jumps (Section 4.3). The dynamic baseline is right on average for such agents, and Haiku’s mild state dependence does not create false punishment in our simulations, but single forks are noisy. A different failure appears for agents that do move gradually but print two-decimal prices: they cannot make moves smaller than half a cent, and in simulation this biases ρ̂ down and PI<sub>15</sub><sup>dyn</sup> up, toward missing punishment. Haiku does not behave like that agent, but other models might.</li>
+<li><b>ρ varies across runs and with the estimator.</b> Per-run estimates range from 0.35 to 0.96, and the pooled 0.922 is above most of them. A fixed-effects fit gives 0.783. Using each run’s own ρ gives −0.348 (CI −0.662 to −0.058) and the fixed-effects ρ gives −0.344 (CI −0.650 to −0.049), both negative but smaller than the pooled result. Part 1 shows a wrong ρ can flip the sign for a non-punisher.</li>
+<li><b>Below the baseline is not proof of punishment.</b> A rival that expects the cutter to keep cutting would also price lower. The upward control rules out a general reaction to any price change, but it is exploratory, covers only 12 forks in 8 runs, and cannot rule out forecasting. Haiku’s own notes point to forecasting (Section 4.4), though notes need not be faithful to how prices are chosen.</li>
+<li><b>No seed control.</b> Copies of a fork are not guaranteed to match apart from the cut. The second no-cut copy measures the drift, but only on 12 fork points. In practice Haiku’s prices matched in 96% of agent-periods.</li>
+<li><b>The effect is uneven across runs.</b> 9 of 12 runs are negative at the pooled ρ (6 of 12 at the fixed-effects ρ), and the sign test is not significant. The interval is below zero and no single run drives it, but the result is carried by a minority of strongly negative runs. Resampling the observed runs suggests that about 36–48 runs would make the sign test significant in 83–93% of studies at the pooled ρ; at the fixed-effects ρ more runs would not help, because the typical run is not below the baseline.</li>
+<li><b>The response does not deter within 15 periods.</b> We cannot tell whether a longer horizon would show stronger enforcement, or whether Haiku’s response is simply weak.</li>
+<li><b>The LLM positive control is small.</b> It rests on 4 usable forks from one game, came on the third attempt, and its rule was added after the main results. It shows the failure mode clearly but is not a precise estimate.</li>
+<li><b>Scale.</b> We only used one model, one market, one cut size (10%), one horizon (15) and 12 runs. Haiku 5.5 runs at its default sampling, which we could not set.</li>
+<li><b>G<sub>H</sub><sup>enforced</sup> holds the cutter’s later prices fixed</b>, so it measures the direct effect of B’s prices on A’s profit, not the full counterfactual.</li>
+</ul>
+
+<h3>Future Work</h3>
+<p>This work could be extended by estimating ρ separately for each agent, letting it depend on the size of the price change, and modelling lumpy (hold-or-jump) adjustment and two-decimal rounding directly when estimating ρ. In addition, 36–48 runs (enough for the run-level sign test, by resampling our runs), a larger upward control, a range of cut sizes, a cut that the rival is told is temporary (to separate punishment from forecasting), and a test of whether asking for notes before the price removes the one-period delay would extend the experiment. Longer horizons could also be used to see whether Haiku’s response deters.</p>
+
+<h2>6. Conclusion</h2>
+<p>The one-period forced-deviation test compares a rival’s response to an instant best response. LLM pricing agents adjust slowly, and with scripted agents we showed that this makes the test label slow punishers as not punishing at all. The same failure occurred with a real LLM, Haiku 5.5: when instructed to punish cuts, it acts one period late and passes the one-period test in every usable fork. A dynamic baseline built from the agent’s estimated stickiness fixed this in every case we tested. Haiku 5.5 is as sticky as the agents where the one-period test fails. On 48 forced cuts, the one-period test finds no punishment while the dynamic measure finds Haiku pricing below the non-punishing baseline, a result that holds under a fixed-effects estimate of stickiness but whose size depends on how stickiness is estimated. Haiku’s response is invisible one period after the cut and present in every period after that, and in its own notes Haiku describes it as forecasting rather than punishment. More generally, whether an agent responds to a deviation and whether that response deters it are different questions, and a one-period test doesn’t answer either of them. It is very important that behavioral audits of AI agents measure how fast an agent moves before what it does is interpreted.</p>
+
+<h3>Code and Data</h3>
+<p class="small">Code, logs and protocol: <a href="https://github.com/romagoat10/calling-the-bluff">github.com/romagoat10/calling-the-bluff</a>. The repository includes the raw Haiku 5.5 sprint logs converted for reanalysis, the scripts that reproduce every table and figure, and the robustness checks added in this revision. Pre-sprint work: Appendix A.</p>
+
+<h3>Author Contributions</h3>
+<p>Abayev Ramazan carried out this research and wrote the paper.</p>
+
+<h3>Acknowledgments</h3>
+<p>We thank Sapargali Akhyl for his help with debugging the code.</p>
+
+<h3>References</h3>
+<ol class="refs small">
+<li>Arslan, Xiao and Kim (2026). Persistent Partners Raise Prices Among Learning Agents. arXiv:2609.35402.</li>
+<li>Calvano, E., Calzolari, G., Denicolò, V. and Pastorello, S. (2020). Artificial Intelligence, Algorithmic Pricing, and Collusion. American Economic Review 110(10).</li>
+<li>Fish, S., Gonczarowski, Y. A. and Shorrer, R. I. (2024). Algorithmic Collusion by Large Language Models. arXiv:2404.00806.</li>
+<li>Garra (2026). Mitigating Emergent Collusion in LLM Pricing Agents. arXiv:2609.13037.</li>
+<li>Lambin, X. (2024). Less than meets the eye: simultaneous experiments as a source of algorithmic seeming collusion. SSRN 4498926.</li>
+<li>Lee and Park (2026). Faithful yet Collusive: Why Chain-of-Thought Monitoring Cannot Detect Collusion in LLM Pricing Agents. Findings of EMNLP 2026.</li>
+<li>Lopes de Moraes and De-Losso (2026). Algorithmic Collusion Without Deterrence: Auditing the Punishment Mechanism in Q-Learning Pricing Agents. arXiv:2610.21867.</li>
+<li>Tran, H. and Yu, H. (2026). Is Anyone Enforcing the Cartel? What Reinforcement Learning Teaches LLM Agents in Markets. arXiv:2610.28787.</li>
+</ol>
+
+<h3>LLM Usage Statement</h3>
+<p>We used Claude Opus 5.5 along with GPT 6 Astaa to help debug the experiment and code, check calculations and assist in drafting sections. For this revision, Claude Opus 5.5 helped write the independent reanalysis code and the robustness checks. We made the main decisions, directed all experiments, and checked every number against the code.</p>
+
+<div class="pagebreak"></div>
+<h2>Appendix</h2>
+<h3>A. Limitations, Dual-Use and Ethical Considerations</h3>
+<p><b>What this does and does not show.</b> We show that one audit design can misread a specific kind of agent, and we test a correction on scripted agents built to follow the correction’s assumptions and on one LLM in one simulated market. We do not show that Claude Haiku 5.5, or any deployed system, colludes in real markets. The main limitations are listed in Section 5.</p>
+<p><b>Dual use.</b> The finding that slow punishment passes a one-period audit could in principle inform someone designing a pricing agent to enforce high prices while passing that audit. We publish because the paper gives the correction alongside the problem, the effect matters only for auditors using the one-period test, and stickiness is already a known, measured property of LLM agents (Garra, 2026), not a technique we introduce. We release no agent designed to collude or to evade audits.</p>
+<p><b>Ethics.</b> All experiments are simulated markets with no real buyers or sellers. No personal data is used. Model outputs were generated through the provider’s standard API under its usage terms.</p>
+<p><b>Pre-sprint work.</b> The research question, literature review and best-response calculations were prepared before the sprint. All code, simulations, model runs and analysis were done during the sprint (October 23 to 25). The protocol and predictions were pushed to the repository before any model output, and every later change is in its deviations log. The robustness checks in this revision were added afterwards and are marked as such.</p>
+
+<h3>B. Recommendations for Auditors</h3>
+<ol>
+<li>Estimate how fast the agent moves (its stickiness) from its ordinary price history, using only what it was shown, before running any forced deviation.</li>
+<li>Do not clear an agent on a one-period test if its stickiness is above ρ* = δ / (δ + |ΔBR|), where δ is the smallest punishment you want to detect and ΔBR is the best-response change your cut causes. With our cut and δ = 0.10, ρ* ≈ 0.5.</li>
+<li>Compare against a baseline that moves at the agent’s own speed, over several periods, rather than summing raw responses.</li>
+<li>Report results across a range of stickiness values, since a wrong value can flip the sign for an agent that does not punish. Include a fixed-effects estimate of ρ when runs settle at different price levels.</li>
+<li>Run a second untouched copy of each fork to measure how far copies drift apart by chance.</li>
+<li>Check that the conclusion survives leaving out any single run, and report how many runs carry it.</li>
+<li>Look at least three periods past the intervention, and plot the response period by period: Haiku’s response is zero in the first period and only appears from the second.</li>
+<li>Read what the agent writes. Report stated reasons alongside prices, because a response that meets a behavioral definition of punishment can be described by the agent as forecasting.</li>
+</ol>
+
+<h3>C. Figure 3</h3>
+<figure>
+<img src="figures/figure3.png" alt="Figure 3" style="width:92%">
+<figcaption>Figure 3. Positive control: Claude Haiku 5.5 instructed to punish a rival that cuts from a high price (game 1, fork at period 50). The cutter is forced from 2.15 to 1.935 (shown as 1.94) at period 0. In period 1, the only period the one-period test looks at, the rival’s written notes say the punishment condition is met and punishment starts now, but its price stays at 2.00. It drops to 1.50 in period 2. The one-period test scores this fork +0.061 (no punishment), and the dynamic measure scores it −3.17. Later drops partly reflect a cycle in which the cutter, also following the rule, reacts to the rival’s punishment.</figcaption>
+</figure>
+
+<h3>D. Figure 4</h3>
+<figure>
+<img src="figures/figure4.png" alt="Figure 4" style="width:70%">
+<figcaption>Figure 4. Dynamic score of a scripted rival that does not punish (true ρ = 0.92, cutter stays low) when the baseline assumes a different ρ. The correct answer is 0 at ρ = 0.92. Assuming ρ = 0.80 gives +0.443 (looks forgiving); assuming ρ = 0.97 gives −0.372 (looks like punishment).</figcaption>
+</figure>
+
+<h3>E. Changes in this revision</h3>
+<ul class="small">
+<li>All Part 2 numbers were recomputed from the raw sprint logs with independently written analysis code, and matched the first version. Part 1 (Table 2) was reproduced exactly.</li>
+<li>Added two robustness checks: a fixed-effects estimate of ρ (Table 3, Table 4, Section 4.2) and a leave-one-run-out analysis (Section 4.2), plus a matching sentence in the abstract and contribution 4.</li>
+<li>Added the closed-form threshold ρ* = δ / (δ + |ΔBR|) for when the one-period test misses a punisher (Section 4.1, contribution 1, Appendix B).</li>
+<li>Added Section 4.3 and Table 6: Haiku holds its price in 91% of periods and then jumps; simulations show the dynamic baseline stays valid for this lumpy adjustment and that Haiku’s state-dependent change rate does not create false punishment. Added a matching sentence to the abstract and a new contribution.</li>
+<li>Added a limitation on lumpy adjustment and two-decimal rounding (Section 5), and the related future work.</li>
+<li>Added Section 4.4, Figure 5 and Table 7: Haiku’s response period by period (zero one period after the cut, below the baseline from the second) and an analysis of the rival’s written notes (forecasting, not retaliation). Updated Table 4, the limitations, the abstract and the recommendations, and added a power estimate for follow-up studies.</li>
+<li>Corrected the deterrence comparison: 0.15 is about a seventh of the cutter’s realized gain (an eighth of its gain without a response).</li>
+<li>Clarified that G<sub>H</sub> sums the cut period and the 15 periods after it, that ΔBR uses the two-decimal price the rival was shown (the forced price 1.935 was shown as 1.94), and that one run drives the positive mean in the upward control.</li>
+<li>Added Figure 4 (Appendix D), which the first version cited but did not include, and two auditor recommendations (Appendix B).</li>
+<li>Updated the code link, Author Contributions and Acknowledgments, and fixed small grammar issues. The PDF now has a clean text layer.</li>
+</ul>
+
+</body>
+</html>

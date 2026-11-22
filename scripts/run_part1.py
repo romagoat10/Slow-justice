@@ -78,11 +78,12 @@ def figure4():
     ax.plot(r, v, color="#3b78c2")
     for rr in (0.80, 0.97):
         vv = dict(data).get(rr)
-        ax.scatter([rr], [vv], color="k"); ax.annotate(f"rho={rr}: {vv:+.3f}", (rr, vv),
-                                                       textcoords="offset points", xytext=(-90, 5))
-    ax.set_xlabel("rho assumed by the dynamic baseline")
-    ax.set_ylabel("PI_15^dyn of a NON-punisher")
-    ax.set_title("True rho = 0.92, cutter stays low")
+        ax.scatter([rr], [vv], color="k", zorder=5)
+        ax.annotate(f"ρ = {rr:.2f}: {vv:+.3f}", (rr, vv), textcoords="offset points",
+                    xytext=(-105, -4 if rr < 0.9 else 6))
+    ax.set_xlabel("ρ assumed by the dynamic baseline")
+    ax.set_ylabel("Dynamic score of a non-punisher")
+    ax.set_title("True ρ = 0.92, cutter stays low", fontsize=10)
     fig.tight_layout(); fig.savefig(OUT / "figure4_wrong_rho.png", dpi=150)
     plt.close(fig)
     return data

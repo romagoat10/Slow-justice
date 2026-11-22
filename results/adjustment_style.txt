@@ -1,0 +1,21 @@
+A. How Haiku 5.5 adjusts (12 base runs, both agents, all periods)
+   price unchanged in 91.0% of periods; changed in 9.0%
+   size of a change: median 0.10, mean 0.14
+   chance of a change by distance from best response |p - BR(q)|:
+     0.00-0.28: 7.8%  (n=910)
+     0.28-0.45: 5.8%  (n=1002)
+     0.45-0.59: 7.1%  (n=1010)
+     0.59-1.72: 13.7%  (n=912)
+
+B. Simulated lumpy rival: holds its price with probability 0.91, otherwise jumps
+   to its target on a 0.05 grid. Dynamic baseline uses the TRUE rho.
+   rho estimated by the paper's regression on lumpy data: 0.922
+   cutter returns   non-punisher          : mean PI_dyn -0.001 (single forks: 0% exactly 0, sd 0.29); mean PI_1 +0.094; 12-run audit says 'below baseline' 0%, sign test significant 0%
+   cutter returns   punisher (delta=0.10) : mean PI_dyn -0.596 (single forks: 0% exactly 0, sd 0.70); mean PI_1 +0.085; 12-run audit says 'below baseline' 100%, sign test significant 100%
+   cutter stays low non-punisher          : mean PI_dyn +0.011 (single forks: 0% exactly 0, sd 0.55); mean PI_1 +0.094; 12-run audit says 'below baseline' 2%, sign test significant 1%
+   cutter stays low punisher (delta=0.10) : mean PI_dyn -0.621 (single forks: 0% exactly 0, sd 1.09); mean PI_1 +0.086; 12-run audit says 'below baseline' 96%, sign test significant 71%
+
+C. State-dependent lumpy NON-punisher calibrated to Haiku (change rates by distance from BR: 8.7%, 5.8%, 8.1%, 13.7%)
+   baseline rho = 0.922 (Haiku's); the simulated pair's own regression gives 0.44 because it settles on one price
+   distance from BR before the cut 0.36 (change rate 5.8%), right after it 0.43 (change rate 5.8%)
+   mean PI_dyn +0.020 (should be 0; Haiku's is -0.534); 12-run audits wrongly saying 'below baseline': 0%
