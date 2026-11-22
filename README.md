@@ -1,8 +1,8 @@
-# Calling the Bluff: reproduction, code, and critical analysis
+# Slow Justice: paper, reproduction code, and analysis
 
 > 📄 **Read the paper: [paper/Calling_the_Bluff.pdf](paper/Calling_the_Bluff.pdf)** (revised version, November 2026). The original hackathon version is [paper/Calling_the_Bluff_sprint_version.pdf](paper/Calling_the_Bluff_sprint_version.pdf). The paper's source is [paper/source/paper.html](paper/source/paper.html): edit it, then print it to PDF (see §1).
 >
-> *Calling the Bluff: Forced-Deviation Audits of LLM Pricing Agents That Punish Slowly.* Abayev Ramazan, with Apart Research (hackathon sprint, October 2026).
+> *Slow Justice: How LLM Pricing Agents Pass Collusion Audits by Reacting Late.* Abayev Ramazan, with Apart Research. First written at an Apart Research hackathon (October 2026) under the title *Calling the Bluff: Forced-Deviation Audits of LLM Pricing Agents That Punish Slowly*.
 
 This repository holds the code to reproduce the paper, checks of every number it reports, and the planned improvements for the next version.
 
