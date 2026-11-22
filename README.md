@@ -381,3 +381,9 @@ In the positive control, Haiku's notes say "punish now" but its price doesn't ch
 3. Add a rounding-aware ρ estimator and report the §7.1 sensitivity on Haiku's own data.
 4. Report the fixed-effects ρ and a leave-one-run-out analysis next to Table 3.
 5. Fix the PDF's text layer and the three wording issues in §6.2, and add the missing Figure 4.
+
+---
+
+## Acknowledgments
+
+We thank Sapargali Akhyl for his help with debugging the code.
